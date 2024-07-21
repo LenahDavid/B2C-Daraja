@@ -3,13 +3,14 @@ package com.example.darajab2c.entity;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.time.LocalDateTime;
 
 @Document(collection = "b2c_requests")
 @Data
 public class B2CRequest {
-    private String OriginatorConversationID;
+    private String originatorConversationID;
     private String InitiatorName;
     private String SecurityCredential;
     private String CommandID;
@@ -22,4 +23,6 @@ public class B2CRequest {
     private String Occasion;
     private LocalDateTime timestamp;
     private String status;
+
+
 }

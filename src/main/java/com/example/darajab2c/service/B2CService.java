@@ -1,8 +1,10 @@
 package com.example.darajab2c.service;
 
+import com.example.darajab2c.controllers.B2CController;
 import com.example.darajab2c.controllers.GenerateToken;
 import com.example.darajab2c.entity.B2CRequest;
 import com.example.darajab2c.entity.B2CResponse;
+import com.example.darajab2c.entity.PaymentStatus;
 import com.example.darajab2c.repository.B2CRequestRepository;
 import com.example.darajab2c.repository.B2CResponseRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +14,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -46,6 +50,7 @@ public class B2CService {
 
     @Value("${daraja.b2c-url}")
     private String darajaApiUrl;
+    private static final Logger logger = LoggerFactory.getLogger(B2CService.class);
     public String initiateB2CPayment(String originatorConversationID, String initiatorName, String securityCredential, String commandID, Long amount, Long partyA, Long partyB, String remarks, String queueTimeOutURL, String resultURL, String occasion) {
         GenerateToken generateToken = new GenerateToken();
         String generatedToken = generateToken.generateToken();
@@ -111,9 +116,12 @@ public class B2CService {
             return "Error: " + e.getMessage();
         }
     }
+    public void sendB2CRequestToKafka(B2CRequest request) {
+        logger.info("Sending B2C request to Kafka: {}", request.getOriginatorConversationID());
+        kafkaTemplate.send("b2c-requests", request.getOriginatorConversationID(), request);
+    }
     public B2CResponse processB2CRequest(B2CRequest request) {
-        // Send the request to Kafka
-        kafkaTemplate.send("b2c-requests", request);
+        sendB2CRequestToKafka(request);
 
         // Call Daraja API and handle saving to the database
         String responseString = initiateB2CPayment(
@@ -139,20 +147,16 @@ public class B2CService {
         response.setResponseDescription(responseJson.getString("ResponseDescription"));
         return response;
     }
-    public Optional<B2CRequest> getPaymentStatus(String OriginatorConversationID) {
-        return b2cRequestRepository.findByOriginatorConversationID(OriginatorConversationID);
+    public Optional<B2CRequest> getPaymentStatus(String originatorConversationID) {
+        return b2cRequestRepository.findByOriginatorConversationID(originatorConversationID);
     }
 
-    public void updatePaymentStatus(B2CResponse response) {
-        Optional<B2CRequest> requestOpt = b2cRequestRepository.findById(response.getOriginatorConversationID());
-        if (requestOpt.isPresent()) {
-            B2CRequest request = requestOpt.get();
-            if ("0".equals(response.getResponseCode())) {
-                request.setStatus("COMPLETED");
-            } else {
-                request.setStatus("FAILED");
-            }
-            b2cRequestRepository.save(request);
+    public void updatePaymentStatus(String originatorConversationID, String status) {
+        try {
+            PaymentStatus paymentStatus = PaymentStatus.valueOf(status.toUpperCase());
+            b2cRequestRepository.updateStatusByOriginatorConversationID(originatorConversationID, paymentStatus.name());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid payment status: " + status);
         }
     }
 

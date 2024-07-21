@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpStatusCodeException;
 
@@ -66,8 +67,7 @@ public class B2CController {
                     .body("Error simulating B2C: " + responseBody);
         }
     }
-
-    @GetMapping("status/all")
+    @GetMapping("/status")
     public List<B2CRequest> getAllRequests() {
         return b2cRequestRepository.findAll();
     }
@@ -76,9 +76,9 @@ public class B2CController {
             summary = "Fetching the request"
 
     )
-    @GetMapping("/status/{OriginatorConversationID}")
-    public ResponseEntity<B2CRequest> fetchPaymentStatus(@PathVariable String OriginatorConversationID) {
-        Optional<B2CRequest> requestOptional = b2cService.getPaymentStatus(OriginatorConversationID);
+    @GetMapping("/status/{originatorConversationID}")
+    public ResponseEntity<B2CRequest> fetchPaymentStatus(@PathVariable String originatorConversationID) {
+        Optional<B2CRequest> requestOptional = b2cService.getPaymentStatus(originatorConversationID);
 
         return requestOptional
                 .map(ResponseEntity::ok)
@@ -90,8 +90,19 @@ public class B2CController {
 
     )
 
-    @PutMapping("/update")
-    public void updatePaymentStatus(@RequestBody B2CResponse response) {
-        b2cService.updatePaymentStatus(response);
+
+    @PutMapping("/status/{originatorConversationID}")
+    public ResponseEntity<String> updatePaymentStatus(
+            @PathVariable String originatorConversationID,
+            @RequestParam String status) {
+        try {
+            b2cService.updatePaymentStatus(originatorConversationID, status);
+            return ResponseEntity.ok("Payment status updated successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error updating payment status: " + e.getMessage());
+        }
     }
+
+
 }

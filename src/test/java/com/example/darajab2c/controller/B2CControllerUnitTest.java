@@ -1,13 +1,13 @@
 package com.example.darajab2c.controller;
+
 import com.example.darajab2c.controllers.B2CController;
+import com.example.darajab2c.dto.PaymentRequest;
 import com.example.darajab2c.entity.B2CRequest;
 import com.example.darajab2c.entity.B2CResponse;
-import com.example.darajab2c.service.B2CService;
-import org.junit.jupiter.api.Test;
-import static org.mockito.Mockito.when;
-import com.example.darajab2c.dto.PaymentRequest;
 import com.example.darajab2c.repository.B2CRequestRepository;
+import com.example.darajab2c.service.B2CService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -22,8 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class B2CControllerTest {
-
+public class B2CControllerUnitTest {
     @Mock
     private B2CService b2cService;
 
@@ -56,7 +55,8 @@ class B2CControllerTest {
         PaymentRequest paymentRequest = new PaymentRequest();
         paymentRequest.setOriginatorConversationID("testID");
         when(b2cService.initiateB2CPayment(anyString(), anyString(), anyString(), anyString(), anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString(), anyString()))
-                .thenThrow(new HttpStatusCodeException(HttpStatus.BAD_REQUEST, "Error") {});
+                .thenThrow(new HttpStatusCodeException(HttpStatus.BAD_REQUEST, "Error") {
+                });
 
         ResponseEntity<String> response = b2cController.receiveB2CRequest(paymentRequest);
 
@@ -97,7 +97,8 @@ class B2CControllerTest {
     @Test
     void updatePaymentStatus() {
         B2CResponse response = new B2CResponse();
-        b2cController.updatePaymentStatus(response);
-        verify(b2cService, times(1)).updatePaymentStatus(response);
+        b2cController.updatePaymentStatus("testID", "testStatus");
+        verify(b2cService, times(1)).updatePaymentStatus("testID", "testStatus");
+
     }
 }

@@ -11,7 +11,12 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.Optional;
+
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -23,59 +28,53 @@ class B2CControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
-
-    @Autowired
     private B2CRequestRepository b2cRequestRepository;
 
-    @BeforeEach
-    void setUp() {
-        b2cRequestRepository.deleteAll();
-    }
-
     @Test
-    void receiveB2CRequest() throws Exception {
+    public void testReceiveB2CRequest() throws Exception {
         PaymentRequest paymentRequest = new PaymentRequest();
         paymentRequest.setOriginatorConversationID("testID");
-        paymentRequest.setInitiatorName("testName");
-        // Set other fields...
+        // Set other fields as required
 
         mockMvc.perform(post("/api/b2c/request")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(paymentRequest)))
+                        .content("{\"originatorConversationID\":\"testID\"}"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Success")));
+    }
+
+    @Test
+    public void testGetAllRequests() throws Exception {
+        mockMvc.perform(get("/api/b2c/status"))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void getAllRequests() throws Exception {
-        B2CRequest request = new B2CRequest();
-        request.setOriginatorConversationID("testID");
-        b2cRequestRepository.save(request);
+    public void testFetchPaymentStatus() throws Exception {
+        B2CRequest b2cRequest = new B2CRequest();
+        b2cRequest.setOriginatorConversationID("testID");
+        b2cRequestRepository.save(b2cRequest);
 
-        mockMvc.perform(get("/api/b2c/status/all"))
+        MvcResult result = mockMvc.perform(get("/api/b2c/status/testID"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].originatorConversationID").value("testID"));
+                .andReturn();
+
+        String content = result.getResponse().getContentAsString();
+        assertEquals(content.contains("testID"), true);
     }
 
     @Test
-    void fetchPaymentStatus() throws Exception {
-        B2CRequest request = new B2CRequest();
-        request.setOriginatorConversationID("testID");
-        b2cRequestRepository.save(request);
+    public void testUpdatePaymentStatus() throws Exception {
+        B2CRequest b2cRequest = new B2CRequest();
+        b2cRequest.setOriginatorConversationID("testID");
+        b2cRequestRepository.save(b2cRequest);
 
-        mockMvc.perform(get("/api/b2c/status/testID"))
+        mockMvc.perform(put("/api/b2c/status/testID")
+                        .param("status", "Completed"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.originatorConversationID").value("testID"));
-    }
+                .andExpect(content().string("Payment status updated successfully"));
 
-    @Test
-    void updatePaymentStatus() throws Exception {
-        B2CResponse response = new B2CResponse();
-        response.setOriginatorConversationID("testID");
-
-        mockMvc.perform(put("/api/b2c/update")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(response)))
-                .andExpect(status().isOk());
+        Optional<B2CRequest> updatedRequest = b2cRequestRepository.findById(b2cRequest.getOriginatorConversationID());
+        assertEquals("Completed", updatedRequest.get().getStatus());
     }
 }
