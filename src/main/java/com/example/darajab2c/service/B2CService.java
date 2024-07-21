@@ -99,6 +99,7 @@ public class B2CService {
             b2cRequest.setStatus("Pending");
             b2cRequestRepository.save(b2cRequest);
 
+            sendB2CRequestToKafka(b2cRequest);
             // Save the response
             if (response.isSuccessful()) {
                 JSONObject jsonResponse = new JSONObject(responseBody);
