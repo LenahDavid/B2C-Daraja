@@ -22,7 +22,7 @@ public class PaymentRequest implements Serializable {
     @JsonProperty("Amount")
     @NotNull(message = "Amount is required")
     @Min(value = 10, message = "Amount should be at least 10")
-    @Max(value = 150, message = "Amount should be at most 150000")
+    @Max(value = 150000, message = "Amount should be at most 150000")
     private Long Amount;
     @JsonProperty("PartyA")
     private Long PartyA;

@@ -45,6 +45,19 @@ public class B2CController {
     @PostMapping("/request")
     public ResponseEntity<String> receiveB2CRequest(@RequestBody PaymentRequest paymentRequest) {
         try {
+//            if (!isValidAmount(paymentRequest.getAmount()) || !isValidKenyanMobileNumber(String.valueOf(paymentRequest.getPartyB()))) {
+//                if (!isValidAmount(paymentRequest.getAmount())) {
+//                    return ResponseEntity.badRequest().body("Invalid amount. Please provide a valid amount.");
+//                } else {
+//                    return ResponseEntity.badRequest().body("Invalid mobile number. Please provide a valid Kenyan Safaricom mobile number.");
+//                }
+//            }
+
+            // Validate amount
+            if (!isValidAmount(paymentRequest.getAmount())) {
+                return ResponseEntity.badRequest().body("Invalid amount. Please provide an amount between KSh 10 and K KSh 150,000.");
+            }
+
             String response = b2cService.initiateB2CPayment(
                     paymentRequest.getOriginatorConversationID(),
                     paymentRequest.getInitiatorName(),
@@ -66,6 +79,14 @@ public class B2CController {
             return ResponseEntity.status(e.getStatusCode())
                     .body("Error simulating B2C: " + responseBody);
         }
+    }
+    private boolean isValidKenyanMobileNumber(String mobileNumber) {
+        mobileNumber = mobileNumber.replace("+", "");
+
+        return mobileNumber != null && mobileNumber.matches("^254\\d{10}$");
+    }
+    private boolean isValidAmount(Long amount) {
+        return amount != null && amount >= 10 && amount <= 150000;
     }
     @GetMapping("/status")
     public List<B2CRequest> getAllRequests() {
