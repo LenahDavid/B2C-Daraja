@@ -51,6 +51,7 @@ public class B2CService {
     @Value("${daraja.b2c-url}")
     private String darajaApiUrl;
     private static final Logger logger = LoggerFactory.getLogger(B2CService.class);
+
     public String initiateB2CPayment(String originatorConversationID, String initiatorName, String securityCredential, String commandID, Long amount, Long partyA, Long partyB, String remarks, String queueTimeOutURL, String resultURL, String occasion) {
         GenerateToken generateToken = new GenerateToken();
         String generatedToken = generateToken.generateToken();
@@ -116,14 +117,15 @@ public class B2CService {
             return "Error: " + e.getMessage();
         }
     }
+
     public void sendB2CRequestToKafka(B2CRequest request) {
         logger.info("Sending B2C request to Kafka: {}", request.getOriginatorConversationID());
         kafkaTemplate.send("b2c-requests", request.getOriginatorConversationID(), request);
     }
+
     public B2CResponse processB2CRequest(B2CRequest request) {
         sendB2CRequestToKafka(request);
-
-        // Call Daraja API and handle saving to the database
+        // Call Daraja API
         String responseString = initiateB2CPayment(
                 request.getOriginatorConversationID(),
                 request.getInitiatorName(),
@@ -137,7 +139,6 @@ public class B2CService {
                 request.getResultURL(),
                 request.getOccasion()
         );
-
         // Parse and return the response
         JSONObject responseJson = new JSONObject(responseString);
         B2CResponse response = new B2CResponse();
@@ -147,6 +148,7 @@ public class B2CService {
         response.setResponseDescription(responseJson.getString("ResponseDescription"));
         return response;
     }
+
     public Optional<B2CRequest> getPaymentStatus(String originatorConversationID) {
         return b2cRequestRepository.findByOriginatorConversationID(originatorConversationID);
     }
@@ -159,6 +161,4 @@ public class B2CService {
             throw new IllegalArgumentException("Invalid payment status: " + status);
         }
     }
-
-
-    }
+}

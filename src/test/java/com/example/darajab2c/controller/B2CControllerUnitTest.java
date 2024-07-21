@@ -53,7 +53,7 @@ public class B2CControllerUnitTest {
     @Test
     void receiveB2CRequest_Error() {
         PaymentRequest paymentRequest = new PaymentRequest();
-        paymentRequest.setOriginatorConversationID("testID");
+        paymentRequest.setOriginatorConversationID("88290bbf-08c3-4cb6-baae-f6b2ce7fd9dd");
         when(b2cService.initiateB2CPayment(anyString(), anyString(), anyString(), anyString(), anyLong(), anyLong(), anyLong(), anyString(), anyString(), anyString(), anyString()))
                 .thenThrow(new HttpStatusCodeException(HttpStatus.BAD_REQUEST, "Error") {
                 });

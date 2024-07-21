@@ -2,7 +2,6 @@ package com.example.darajab2c.controllers;
 
 import com.example.darajab2c.dto.PaymentRequest;
 import com.example.darajab2c.entity.B2CRequest;
-import com.example.darajab2c.entity.B2CResponse;
 import com.example.darajab2c.repository.B2CRequestRepository;
 import com.example.darajab2c.service.B2CService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpStatusCodeException;
 
@@ -36,6 +34,7 @@ public class B2CController {
     @Autowired
     B2CRequestRepository b2cRequestRepository;
     private static final Logger logger = LoggerFactory.getLogger(B2CController.class);
+
     @Operation(
             description = "Posting B2C Request",
             summary = "Posting the request"
@@ -45,19 +44,14 @@ public class B2CController {
     @PostMapping("/request")
     public ResponseEntity<String> receiveB2CRequest(@RequestBody PaymentRequest paymentRequest) {
         try {
-//            if (!isValidAmount(paymentRequest.getAmount()) || !isValidKenyanMobileNumber(String.valueOf(paymentRequest.getPartyB()))) {
-//                if (!isValidAmount(paymentRequest.getAmount())) {
-//                    return ResponseEntity.badRequest().body("Invalid amount. Please provide a valid amount.");
-//                } else {
-//                    return ResponseEntity.badRequest().body("Invalid mobile number. Please provide a valid Kenyan Safaricom mobile number.");
-//                }
-//            }
-
-            // Validate amount
+            //validate amount
             if (!isValidAmount(paymentRequest.getAmount())) {
-                return ResponseEntity.badRequest().body("Invalid amount. Please provide an amount between KSh 10 and K KSh 150,000.");
+                return ResponseEntity.badRequest().body("Invalid amount. Please provide an amount between KSh 10 and KSh 150,000.");
             }
-
+            // Validate mobile number
+            if (!isValidKenyanMobileNumber(String.valueOf(paymentRequest.getPartyB()))) {
+                return ResponseEntity.badRequest().body("Invalid mobile number. Please provide a valid Kenyan Safaricom mobile number.");
+            }
             String response = b2cService.initiateB2CPayment(
                     paymentRequest.getOriginatorConversationID(),
                     paymentRequest.getInitiatorName(),
@@ -80,20 +74,32 @@ public class B2CController {
                     .body("Error simulating B2C: " + responseBody);
         }
     }
-    private boolean isValidKenyanMobileNumber(String mobileNumber) {
-        mobileNumber = mobileNumber.replace("+", "");
 
-        return mobileNumber != null && mobileNumber.matches("^254\\d{10}$");
+    private boolean isValidKenyanMobileNumber(String mobileNumber) {
+        if (mobileNumber == null) {
+            return false;
+        }
+        mobileNumber = mobileNumber.startsWith("+") ? mobileNumber.substring(1) : mobileNumber;
+        // Check if the number matches the Safaricom format
+        return mobileNumber.matches("^254(7[0-9]|1[0-1])[0-9]{7}$");
     }
+
     private boolean isValidAmount(Long amount) {
         return amount != null && amount >= 10 && amount <= 150000;
     }
+
+    @Operation(
+            description = "Getting the all requests",
+            summary = "Fetching all the requests"
+
+    )
     @GetMapping("/status")
     public List<B2CRequest> getAllRequests() {
         return b2cRequestRepository.findAll();
     }
+
     @Operation(
-            description = "Gettingthe status of the request",
+            description = "Getting the status of the request",
             summary = "Fetching the request"
 
     )
@@ -105,9 +111,10 @@ public class B2CController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body(new B2CRequest()));
     }
+
     @Operation(
             description = "Updating B2C Request",
-            summary = "Uodating the request"
+            summary = "Updating the request"
 
     )
 
@@ -124,6 +131,4 @@ public class B2CController {
                     .body("Error updating payment status: " + e.getMessage());
         }
     }
-
-
 }

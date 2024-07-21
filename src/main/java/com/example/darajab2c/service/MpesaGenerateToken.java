@@ -13,7 +13,8 @@ import java.util.Base64;
 @Service
 public class MpesaGenerateToken {
 
-
+    @Value("${daraja.auth-url}")
+    private String authUrl;
     OkHttpClient client = new OkHttpClient.Builder().build();
     okhttp3.MediaType mediaType = okhttp3.MediaType.parse("text/plain");
     okhttp3.MediaType JSON = MediaType.parse("application/json; charset=utf-8");
